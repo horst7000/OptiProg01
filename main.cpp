@@ -1,11 +1,14 @@
 #include <iostream>
 #include <lemon/list_graph.h>
 #include <lemon/lgf_reader.h>
+#include <fstream>
+#include <string>
+#include <vector>
 #include<bits/stdc++.h> 
 
 
 using namespace lemon;
-
+using std::vector;
 
 
 /**
@@ -91,12 +94,57 @@ int* dijkstra(ListDigraph &g, ListDigraph::ArcMap<int> &weight, ListDigraph::Nod
     return d;
 }
 
+/**
+ * Aufgabe 3:  Laufzeit O(n^3)
+ * 
+ * Idee: Erzeuge einen neuen Graph mit den Knoten die verbunden werden sollen
+ * und verbinde die Knoten, fuer die in Dijkstra ein Weg gefunden wurde.
+ * Setze als Kosten der Kante die Kosten des Pfades aus Dijkstra.
+ * 
+ * Suche nun den mimalen Spannbaum auf diesem Graph. Ersetze die Kanten
+ * des Spannbaums durch die Knoten und Kanten des zugehörigen Pfades aus Dijkstra.
+ */
+int heuristik(ListDigraph &g, ListDigraph::ArcMap<int> &weight, ListDigraph::NodeMap<int> &label,
+    vector<int> includingNodes, ListDigraph::ArcMap<bool> &subGraphArcs,
+    ListDigraph::NodeMap<bool> &subGraphNodes) {
+    
+    vector<int*> costFromTo(countNodes(g)+1);
+    vector<int*> prevFromTo(countNodes(g)+1);
+    for(int*& prev: prevFromTo)
+        prev = new int[countNodes(g)+1];
+
+    for(int &i : includingNodes) {
+        costFromTo[i] = dijkstra(g, weight, label, i, prevFromTo[i]);
+    }
+        
+    // Ausgabe der Kosten zwischen den Knoten
+    for(int &i: includingNodes) {
+        std::cout << i << ": ";
+        for( int &j: includingNodes) {
+            if(costFromTo[i][j] == INT_MAX)
+                std::cout << "inf" << " ";
+            else
+                std::cout << costFromTo[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+    
+    // TO-DO:    rekursiv Pfade aus Dijkstra bestimmen
+    //         und neuen Graph erstellen. Darauf Spannbaum anwenden
+    //         und in Graph mit original Knoten & Kanten tranformieren
+
+    for(int* prev: prevFromTo)
+        delete[] prev;
+}
+
 int main() {
     for (int i = 1; i <= 6; i++) {
         ListDigraph g;
         ListDigraph::ArcMap<int>    weight(g);
         ListDigraph::NodeMap<int>   label(g);
         ListDigraph::ArcMap<bool>   path(g,false);
+        ListDigraph::ArcMap<bool>   subgraphArcs(g,false);
+        ListDigraph::NodeMap<bool>  subgraphNodes(g,false);
 
         digraphReader(g, "Data/Graph"+std::to_string(i)+".lgf"). // read the directed graph into g
             arcMap("weight", weight).
@@ -120,6 +168,18 @@ int main() {
         // std::cout << "Kosten von " << start << " nach " << end
         //     << ": " << shortestPathCosts[end] << std::endl << std::endl;
         delete[] shortestPathCosts;
+
+        std::ifstream ifs;
+        ifs.open("Data/Graph"+std::to_string(i)+"_Terminals.txt");        
+        vector<int> points;
+        for(std::string cur; std::getline(ifs, cur); points.push_back(std::stoi(cur)));
+        ifs.close();
+
+        if(i==1) {
+            std::cout << "Ausgabe der min. Kosten zwischen gesuchten Knoten" << std::endl;
+            heuristik(g, weight, label, points, subgraphArcs, subgraphNodes);
+        }
+
     }
     
     return 1;
