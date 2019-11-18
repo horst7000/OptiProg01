@@ -4,26 +4,16 @@
 #include<bits/stdc++.h> 
 
 
-
 using namespace lemon;
 
 
-ListDigraph::Arc findMinArcWithoutCircle(
-    ListDigraph &g,
-    ListDigraph::ArcMap<int> &weight,
-    ListDigraph::NodeMap<bool> &isNodeReached
-    ) {
-    ListDigraph::ArcIt minWeightArc(g);
-    for (ListDigraph::ArcIt a(g); a!=INVALID; ++a) {
-        if(weight[a] <= weight[minWeightArc] && // search minimum weight and
-            (!isNodeReached[g.source(a)] || !isNodeReached[g.target(a)])) { // avoid circles                
-            minWeightArc = a;
-        }
-    }
-    return minWeightArc;
-}
 
-int prim(ListDigraph &g, ListDigraph::ArcMap<int> &weight) {
+/**
+ * Aufgabe1:  Laufzeit O(n^3)
+ * Gibt Gewicht des Spannbaums zurueck. Uebergebene ArcMap SpanningTree enthaelt nach
+ * durchlauf im Spannbaum enthaltene Kanten.
+ */
+int prim(ListDigraph &g, ListDigraph::ArcMap<int> &weight, ListDigraph::ArcMap<bool> &spanningTree) {
     // initialisiere X
     ListDigraph::NodeMap<bool>  isNodeInX(g, false);
     isNodeInX[g.nodeFromId(0)] = true;
@@ -45,6 +35,7 @@ int prim(ListDigraph &g, ListDigraph::ArcMap<int> &weight) {
             }
         }
 
+        spanningTree[minWeightArc] = true;
         totalWeight += weight[minWeightArc];
         
         // fuege v zu X hinzu
@@ -56,42 +47,56 @@ int prim(ListDigraph &g, ListDigraph::ArcMap<int> &weight) {
     return totalWeight;
 }
 
-int kruskal(ListDigraph &g, ListDigraph::ArcMap<int> &weight) {    
-    ListDigraph::NodeMap<bool>  isNodeReached(g, false);
-    ListDigraph::Arc minWeightArc;
-    int nodeCount   = 0;
-    int totalWeight = 0;
+/**
+ * Aufgabe2:  Laufzeit O(n^3)
+ * Gibt minimale Kosten von start zu allen Knoten zurueck.
+ * Mittels Prev koennen alle Wege rekonstruiert werden.
+ */
+int* dijkstra(ListDigraph &g, ListDigraph::ArcMap<int> &weight, ListDigraph::NodeMap<int> &label,
+    int start, int* prev) {
+    // initialisiere T
+    ListDigraph::NodeMap<bool>  isNodeInT(g, true);
+    int nodeCountT  = countNodes(g);
 
-    int arcCount = 0;
+    // initialisiere d: Kosten von start
+    int* d = new int[countNodes(g)+1];  // +1 damit max. index = label[maxNode]
+    std::fill_n(d,countNodes(g)+1,INT_MAX);
+    d[start] = 0;
 
-    while(nodeCount < countNodes(g)) {
-        minWeightArc = findMinArcWithoutCircle(g,weight,isNodeReached);
-        if(!isNodeReached[g.source(minWeightArc)]) {
-            isNodeReached[g.source(minWeightArc)] = true;
-            nodeCount++;
+    while(nodeCountT > 0) {
+        ListDigraph::Node minWeightNode;
+        int minCost = INT_MAX;
+
+        // finde guenstigsten Ausgangspunkt in T
+        for(ListDigraph::NodeIt n(g); n!=INVALID; ++n) {
+            if(d[label[n]] < minCost &&
+                isNodeInT[n]) {
+                minWeightNode   = n;
+                minCost         = d[label[minWeightNode]];
+            }
         }
-        if(!isNodeReached[g.target(minWeightArc)]) {
-            isNodeReached[g.target(minWeightArc)] = true;
-            nodeCount++;
+
+        isNodeInT[minWeightNode] = false;
+        nodeCountT--;
+
+        for(ListDigraph::ArcIt a(g); a!=INVALID; ++a) {
+            if(g.source(a) == minWeightNode && // Kanten ausgehend von Ausgangspunkt
+                d[label[g.source(a)]] + weight[a] < d[label[g.target(a)]]) {
+                d[label[g.target(a)]]    = d[label[g.source(a)]] + weight[a];
+                prev[label[g.target(a)]] = label[g.source(a)];
+            }            
         }
-        // int nodeCountG = countNodes(g);
-        totalWeight += weight[minWeightArc];
-        arcCount++;
-        // std::cout << nodeCount << " (+" << weight[minWeightArc]
-        //     << ") " << totalWeight << std::endl;
-        std::cout << g.id(g.source(minWeightArc)) << " " << g.id(g.target(minWeightArc)) << std::endl;    
-        g.erase(minWeightArc);
     }
-    std::cout << arcCount << std::endl;
-    return totalWeight;
+    
+    return d;
 }
-
 
 int main() {
     for (int i = 1; i <= 6; i++) {
         ListDigraph g;
         ListDigraph::ArcMap<int>    weight(g);
         ListDigraph::NodeMap<int>   label(g);
+        ListDigraph::ArcMap<bool>   path(g,false);
 
         digraphReader(g, "Data/Graph"+std::to_string(i)+".lgf"). // read the directed graph into g
             arcMap("weight", weight).
@@ -100,10 +105,21 @@ int main() {
 
         std::cout << "lade Graph" << i << ".lgf" << std::endl;
 
-        // int totalWeightK = kruskal(g,weight);
-        int totalWeight = prim(g,weight);
-        std::cout << countNodes(g) << " " << totalWeight
-            << std::endl << std::endl;
+        // init fuer prim
+        ListDigraph::ArcMap<bool>   spanningTree(g,false);
+        int totalWeight = prim(g,weight,spanningTree);
+        std::cout << "Anzahl Knoten: " << countNodes(g) << "   Gew. des Spannbaums: " << totalWeight << std::endl;
+
+
+        // init fuer dijkstra
+        int prev[countNodes(g)+1];
+        int start = 21;        
+        int end = 6;
+        
+        int* shortestPathCosts = dijkstra(g, weight, label, start, prev);
+        // std::cout << "Kosten von " << start << " nach " << end
+        //     << ": " << shortestPathCosts[end] << std::endl << std::endl;
+        delete[] shortestPathCosts;
     }
     
     return 1;
