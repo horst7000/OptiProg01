@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "debug myProg",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/myProg.exe",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "miDebuggerPath": "c:\\msys64\\usr\\bin\\gdb.exe",
+            "sourceFileMap": {
+                "/c/": "c:/"
+            },
+        }
+        
+    ]
+} 
