@@ -5,6 +5,7 @@
 /tmp
 /out-tsc
 *.exe
+*.o
 *.stackdump
 # Only exists if Bazel was run
 /bazel-out
